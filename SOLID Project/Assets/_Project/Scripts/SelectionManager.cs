@@ -1,43 +1,30 @@
-﻿﻿using UnityEngine;
+﻿using UnityEngine;
 
 public class SelectionManager : MonoBehaviour
 {
-    [SerializeField] private string selectableTag = "Selectable";
-    [SerializeField] private Material highlightMaterial;
-    [SerializeField] private Material defaultMaterial;
+    private ISelectionResponse _selectionResponse;
+    private IRayProvider _rayProvider;
+    private ISelector _selector;
+    private Transform _currentSelection;
 
-    private Transform _selection;
-    
+    private void Awake()
+    {
+        _selectionResponse = GetComponent<ISelectionResponse>();
+        _rayProvider = GetComponent<IRayProvider>();
+        _selector = GetComponent<ISelector>();
+    }
+
     private void Update()
     {
-        if (_selection != null)
-        {
-            var selectionRenderer = _selection.GetComponent<Renderer>();
-            if (selectionRenderer != null)
-            {
-                selectionRenderer.material = defaultMaterial;
-            }
-        }
+        if (_currentSelection != null) _selectionResponse.OnDeselect(_currentSelection);
 
-        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        
-        _selection = null;
-        if (Physics.Raycast(ray, out var hit))
-        {
-            var selection = hit.transform;
-            if (selection.CompareTag(selectableTag))
-            {
-                _selection = selection;
-            }
-        }
+        Ray ray = _rayProvider.CreateRay();
 
-        if (_selection != null)
-        {
-            var selectionRenderer = _selection.GetComponent<Renderer>();
-            if (selectionRenderer != null)
-            {
-                selectionRenderer.material = highlightMaterial;
-            }
-        }
-    }
+        //Selection Determination
+        _selector.Check(ray);
+
+        _currentSelection = _selector.GetSelection();
+
+        if (_currentSelection != null) _selectionResponse.OnSelect(_currentSelection);
+    }   
 }
